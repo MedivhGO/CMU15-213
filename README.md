@@ -1,3 +1,19 @@
 # CSAPPLab
 
--[x] boom
+- [x] boom
+
+- [ ] cachelab
+
+- [ ] archlab
+
+- [ ] malloclab
+
+- [ ] datalab
+
+- [ ] perflab
+
+- [ ] proxylab
+
+- [ ] shlab
+
+- [ ] target1
