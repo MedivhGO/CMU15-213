@@ -153,9 +153,8 @@ int bitXor(int x, int y) {
  *   Rating: 1
  */
 int tmin(void) {
-
-  return 2;
-
+  /* 以二进制补码形式返回最小的integer值 */
+  return 1<<31;
 }
 //2
 /*
