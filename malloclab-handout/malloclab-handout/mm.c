@@ -44,11 +44,17 @@ team_t team = {
 
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
 
+
+static char* find_fit(int size);
+static void place(char* bp, int asize);
 /* 
  * mm_init - initialize the malloc package.
  */
 int mm_init(void)
 {
+	// 进行所有的初始化操作,包括分配初始的堆区域.
+	// 必须在这里重新初始化所有全局变量
+	// 成功返回0,失败返回-1
     return 0;
 }
 
@@ -58,14 +64,38 @@ int mm_init(void)
  */
 void *mm_malloc(size_t size)
 {
-    int newsize = ALIGN(size + SIZE_T_SIZE);
-    void *p = mem_sbrk(newsize);
-    if (p == (void *)-1)
-	return NULL;
-    else {
-        *(size_t *)p = size;
-        return (void *)((char *)p + SIZE_T_SIZE);
-    }
+//    int newsize = ALIGN(size + SIZE_T_SIZE);
+//    void *p = mem_sbrk(newsize);
+//    if (p == (void *)-1)
+//	return NULL;
+//    else {
+//        *(size_t *)p = size;
+//        return (void *)((char *)p + SIZE_T_SIZE);
+//    }
+	size_t asize;
+	size_t extendsize;
+	char *bp;
+
+	if (size == 0)
+		return NULL;
+
+	if (size <= DSIZE) 
+		asize = 2 * DSIZE;
+	else 
+		asize = DSIZE * ((size + (DSIZE) + (DSIZE - 1)) / DSIZE);
+
+	if ((bp = find_fit(asize)) != NULL) {
+		place(bp, asize);
+		return bp;
+	}
+
+	extendsize = MAX(asize,CHUNKSIZE);
+
+	if ((bp = extend_heap(extendsize / WSIZE)) == NULL)
+		return NULL;
+
+	place(bp, asize);
+	return bp;
 }
 
 /*
