@@ -154,7 +154,7 @@ int bitXor(int x, int y) {
  */
 int tmin(void) {
   /* 以二进制补码形式返回最小的integer值 */
-  return 1<<31;
+  return 1 << 31;
 }
 //2
 /*
@@ -186,7 +186,7 @@ int allOddBits(int x) {
  *   Rating: 2
  */
 int negate(int x) {
-  return 2;
+  return ~x + 1;
 }
 //3
 /* 
