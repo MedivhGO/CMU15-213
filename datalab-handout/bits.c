@@ -184,7 +184,8 @@ int isTmax(int x) {
  *   Rating: 2
  */
 int allOddBits(int x) {
-  return !((x & 0xAAAAAAAA) ^ 0xAAAAAAAA);
+  int mask = 0xAA + (0xAA << 8) + (0xAA << 16) + (0xAA << 24);
+  return !((x & mask) ^ mask);
 }
 /* 
  * negate - return -x 
@@ -207,7 +208,16 @@ int negate(int x) {
  *   Rating: 3
  */
 int isAsciiDigit(int x) {
+	int mask1 = ~0x0F;
+	int mask2 = 0x0000000F;
+	int low = x & mask2;
+  int mask4 = 0x8;
 
+	return !(((x & mask1) ^ 0x30)) & (
+    !((low & mask4) ^0x0) |
+		!(low ^ 0x8) |
+		!(low ^ 0x9)
+	);
 }
 /* 
  * conditional - same as x ? y : z 
@@ -217,7 +227,14 @@ int isAsciiDigit(int x) {
  *   Rating: 3
  */
 int conditional(int x, int y, int z) {
-  return 2;
+  /*
+    如何使用为运算来进行两个值取其一 t为全1
+    0 | x = x
+    ( t & z | !t & y)
+  */
+  int temp = !!x; // 取x的bool值， temp的结果只可能是0，或者1
+  temp = ~temp + 1; // 取反 得到 0， 或者 -1，即全0，或者全1
+  return (temp & y)|(~temp & z); //全1就返回 y 全0就返回 z
 }
 /* 
  * isLessOrEqual - if x <= y  then return 1, else return 0 
