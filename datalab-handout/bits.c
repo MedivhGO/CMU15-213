@@ -244,7 +244,15 @@ int conditional(int x, int y, int z) {
  *   Rating: 3
  */
 int isLessOrEqual(int x, int y) {
-  return 2;
+	int negx = ~x + 1;
+	int res = y + negx;
+	int sign = res >> 31 & 1; // 检查结果的符号位,符号位相同 如果为1 说明 y-x < 0,y < x , 如果为0， 说明 y>=x. 符号位不同正数大
+	int leftBit = 1 << 31; // 最大为为1的32位有符号数 1000000...
+	int xsign = x & leftBit; // 1000000或者00000..
+	int ysign = y & leftBit; // 1000000或者00000..
+	int bitxor = xsign ^ ysign; // 1000000或者00000..
+	bitxor = (bitxor >> 31) & 1; // bitxor最后的值位 0或者1 0相同符号位，1不同符号位
+	return ((!bitxor) & !sign)| ((bitxor) & !( y >> 31));
 }
 //4
 /* 
@@ -256,7 +264,14 @@ int isLessOrEqual(int x, int y) {
  *   Rating: 4 
  */
 int logicalNeg(int x) {
-  return 2;
+	/*
+		为了得到x=0时 logicalneg 为1。 x=非0时 logicalneg  为0
+		当x=0时，要返回1， 可以 t + 1 当 x = 0 时 t = 0，也就是 t = 0000000
+		当x为非0时，要返回0， 可以 t + 1 当 x非0时， t = -1  t = 1111111
+		所以 一个数 | 他的相反数 结果的符号为一定为1，所以可以进行右移31位，补充成全1
+		考虑当 x=100000时，他与~x+1也满足。
+	*/
+	return ((x |(~x+1))>>31)+1;
 }
 /* howManyBits - return the minimum number of bits required to represent x in
  *             two's complement
