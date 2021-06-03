@@ -327,6 +327,12 @@ int howManyBits(int x) {
  *   Rating: 4
  */
 unsigned floatScale2(unsigned uf) {
+  /*
+	返回位级别的2*f的结果
+	输入参数和返回结果都使用无符号整形,但是他们是用来表示一个
+	单精度的浮点数。
+	当输入参数时NaN时，返回该参数。
+  */
   return 2;
 }
 /* 
@@ -342,6 +348,10 @@ unsigned floatScale2(unsigned uf) {
  *   Rating: 4
  */
 int floatFloat2Int(unsigned uf) {
+  /*
+  	返回由无符号变量uf所给定的二进制数，所代表的单精度浮点型变量的对应有符号
+  	整形值。任意超过范围的数返回0x80000000u.
+  */
   return 2;
 }
 /* 
@@ -358,5 +368,11 @@ int floatFloat2Int(unsigned uf) {
  *   Rating: 4
  */
 unsigned floatPower2(int x) {
+	/*
+	    计算2.0^x， x为任意的int变量
+		返回值的单精度浮点型的二进制保存在unsigned类型变量中。
+		如果结果太小不能用denorm表达，就返回0。
+		如果结果太大，就返回+INF
+	*/
     return 2;
 }
