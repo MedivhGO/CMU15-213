@@ -333,7 +333,19 @@ unsigned floatScale2(unsigned uf) {
 	单精度的浮点数。
 	当输入参数时NaN时，返回该参数。
   */
-  return 2;
+  unsigned exp = (uf & 0x7f800000)>>23; // 取23-30共8位
+  unsigned sign = (uf >> 31) & 0x01; // 得到符号位
+  unsigned frac = uf & 0x7FFFFF;
+  unsigned res;
+  if (exp == 0xFF) return uf; // 如果 exp=255 frac为全0,表示无穷大，非0表示NaN。都可以直接return uf
+  else if (exp == 0) { // 非规范化数
+  	frac <<= 1; // frac右移一位，相当与乘以2
+  	res = (sign << 31) | (exp << 23) | frac; // 重新设置浮点数各个位置的0，1情况
+  } else { // 规范化数
+  	exp++; // exp 指数位置+1就相当于 *2 
+  	res = (sign << 31) | (exp << 23) | frac; // 重新设置浮点数各个位置的0，1情况
+  }
+  return res; // 返回结果
 }
 /* 
  * floatFloat2Int - Return bit-level equivalent of expression (int) f
