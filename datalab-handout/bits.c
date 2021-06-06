@@ -195,6 +195,11 @@ int allOddBits(int x) {
  *   Rating: 2
  */
 int negate(int x) {
+  /*
+    A + ~A = -1
+    A + neg A = 0
+    neg A = ~A + 1
+  */
   return ~x + 1;
 }
 //3
@@ -326,22 +331,44 @@ int howManyBits(int x) {
  *   Max ops: 30
  *   Rating: 4
  */
+/*
+    在规格化的数中
+    在exp既不是全0,也不是全1的时候,称这个浮点数位规格化的值.在这种情况下,阶码字段也就是exp字段被解释为
+    以偏置(biased)形式表示的有符号整数.也就是说, 阶码的值是 E = e-Bias,其中e是无符号数.
+    其位表示为ek-1.....e1e0.而Bias是一个等于2^k-1 - 1的偏置值.
+
+    对于float的所采用的单精度浮点型数来说.
+    bias = 2^(8-1)-1= 127
+    E = e - 127, e是exp的值, 也就是 -126<=E<=127
+    
+    尾码 frac 被解释为小数值f, 其中 0<=f<1,其二进制表示为0.fn-1fn-2...f1f0.
+    也就是说二进制的小数点在最高有效位的左边.
+    尾数 M定义为 M = 1 + f.
+    这种方式也叫做隐含的以1开头的表示.
+    我们可以把M看成一个二进制表达式为1.fn-1fn-2fn-3....f0的数字.
+
+    在非规格化的数中
+    M = f = 0.fn-1fn-2...f1f0
+*/
+
 unsigned floatScale2(unsigned uf) {
   /*
 	返回位级别的2*f的结果
 	输入参数和返回结果都使用无符号整形,但是他们是用来表示一个
 	单精度的浮点数。
 	当输入参数时NaN时，返回该参数。
+  当计算 根号-1,无穷减去无穷.或者表示未初始化的数据时,他们NaN是很有用处的.
   */
-  unsigned exp = (uf & 0x7f800000)>>23; // 取23-30共8位
+  unsigned exp = (uf & 0x7f800000)>>23; // 取23-30共8位 阶码 8位
   unsigned sign = (uf >> 31) & 0x01; // 得到符号位
-  unsigned frac = uf & 0x7FFFFF;
+  unsigned frac = uf & 0x7FFFFF; // 尾数 23位
   unsigned res;
-  if (exp == 0xFF) return uf; // 如果 exp=255 frac为全0,表示无穷大，非0表示NaN。都可以直接return uf
-  else if (exp == 0) { // 非规范化数
+  if (exp == 0xFF) return uf; // 如果 exp=255,也就是阶码所有位都为1. 
+  //frac为全0,表示无穷大(正无穷和负无穷,能够表示溢出的结果)，非0表示NaN(not a number,一些运算的结果不能是实数或无穷就可以返回NaN)。都可以直接return uf
+  else if (exp == 0) { // 非规格化的数,也就是阶码为0, 这样就可以表示0了, 值+0.0和值-0.0在某些方面被认为是不同的,而在其他方面是相同的.
   	frac <<= 1; // frac右移一位，相当与乘以2
   	res = (sign << 31) | (exp << 23) | frac; // 重新设置浮点数各个位置的0，1情况
-  } else { // 规范化数
+  } else { // 规范化数,阶码既不全是0,也不全是1.
   	exp++; // exp 指数位置+1就相当于 *2 
   	res = (sign << 31) | (exp << 23) | frac; // 重新设置浮点数各个位置的0，1情况
   }
@@ -361,10 +388,38 @@ unsigned floatScale2(unsigned uf) {
  */
 int floatFloat2Int(unsigned uf) {
   /*
-  	返回由无符号变量uf所给定的二进制数，所代表的单精度浮点型变量的对应有符号
+  	返回由无符号变量uf所给定的二进制数，所代表的单精度浮点型变量转换成有符号
   	整形值。任意超过范围的数返回0x80000000u.
+
+    先计算出 E = exp - bias
+    1. 如果是小数 E < 0 的情况,我们直接返回0.
+    2. 如果是exp = 255 的情况直接返回0x80000000u 这里注意如果超出范围了,也会直接返回0x80000000u
+    因此可以直接使用E >= 31 来判断.
+    3. 如果是规格化数则我们进行正常的处理 V = (-1)^s * M * 2^E
+       1. 先给尾数补充上省略的1
+       2. 判断 E < 23 则尾数需要舍去 23 - E 位
+       3. 根据符号位返回结果
   */
-  return 2;
+  unsigned exp = (uf & 0x7f800000) >> 23; // 8位的阶码
+  int sign = uf >> 31 & 0x1;
+  unsigned frac = uf & 0x7FFFFF; // 23位的尾数
+  int E = exp - 127; // bias为127, 得到通过exp和bias计算得到的E
+  if (E < 0) return 0; // 所表示的是一个小于1的数,所以转换成int型,直接返回0.
+  else if (E >= 31) { // 超过了32bit所能表示的int值
+    return 0x80000000u;
+  } else { //  0<=E<31
+    frac = frac | 1 << 23; // 给尾数补上省略的1
+    if (E < 23) { // 要把frac变成一个整形的数,需要23位
+      frac >>= (23 - E); // 不够23位,那么只能保留 E 个整数位,因此需要将整个frac向右移动23 - E个位置
+    } else {
+      frac <<= (E - 23); // E的剩余的位数用来给frac的整数部分进行*2的运算
+    }
+  }
+  if (sign) { // 加上符号
+    return -frac;
+  } else {
+    return frac;
+  }
 }
 /* 
  * floatPower2 - Return bit-level equivalent of the expression 2.0^x
