@@ -8,7 +8,7 @@
 
 - [ ] malloclab
 
-- [ ] datalab
+- [x] datalab
 
 - [ ] perflab
 
