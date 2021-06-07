@@ -24,15 +24,15 @@
  ********************************************************/
 team_t team = {
     /* Team name */
-    "ateam",
+    "lijingqi",
     /* First member's full name */
-    "Harry Bovik",
+    "lijingqi",
     /* First member's email address */
-    "bovik@cs.cmu.edu",
+    "lijingqi93@gmail.com",
     /* Second member's full name (leave blank if none) */
-    "",
+    "lijingqi",
     /* Second member's email address (leave blank if none) */
-    ""
+    "lijingqi93@gmail.com"
 };
 
 /* single word (4) or double word (8) alignment */
@@ -52,9 +52,9 @@ static void place(char* bp, int asize);
  */
 int mm_init(void)
 {
-	// 进行所有的初始化操作,包括分配初始的堆区域.
-	// 必须在这里重新初始化所有全局变量
-	// 成功返回0,失败返回-1
+    // 进行所有的初始化操作,包括分配初始的堆区域.
+    // 必须在这里重新初始化所有全局变量
+    // 成功返回0,失败返回-1
     return 0;
 }
 
@@ -72,30 +72,30 @@ void *mm_malloc(size_t size)
 //        *(size_t *)p = size;
 //        return (void *)((char *)p + SIZE_T_SIZE);
 //    }
-	size_t asize;
-	size_t extendsize;
-	char *bp;
+    // size_t asize;
+    // size_t extendsize;
+    // char *bp;
 
-	if (size == 0)
-		return NULL;
+    // if (size == 0)
+    //     return NULL;
 
-	if (size <= DSIZE) 
-		asize = 2 * DSIZE;
-	else 
-		asize = DSIZE * ((size + (DSIZE) + (DSIZE - 1)) / DSIZE);
+    // if (size <= DSIZE) 
+    //     asize = 2 * DSIZE;
+    // else 
+    //     asize = DSIZE * ((size + (DSIZE) + (DSIZE - 1)) / DSIZE);
 
-	if ((bp = find_fit(asize)) != NULL) {
-		place(bp, asize);
-		return bp;
-	}
+    // if ((bp = find_fit(asize)) != NULL) {
+    //     place(bp, asize);
+    //     return bp;
+    // }
 
-	extendsize = MAX(asize,CHUNKSIZE);
+    // extendsize = MAX(asize,CHUNKSIZE);
 
-	if ((bp = extend_heap(extendsize / WSIZE)) == NULL)
-		return NULL;
+    // if ((bp = extend_heap(extendsize / WSIZE)) == NULL)
+    //     return NULL;
 
-	place(bp, asize);
-	return bp;
+    // place(bp, asize);
+    // return bp;
 }
 
 /*
@@ -103,6 +103,7 @@ void *mm_malloc(size_t size)
  */
 void mm_free(void *ptr)
 {
+
 }
 
 /*
