@@ -14,6 +14,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <string.h>
+#include <errno.h>
 
 #include "mm.h"
 #include "memlib.h"
@@ -44,9 +45,29 @@ team_t team = {
 
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
 
+#pragma pack(push, 8)
+typedef struct block_meta {
+  size_t size;
+  int free;
+  struct block_meta* next_block;
+} block_meta;
+#pragma pack(8)
+
+
+#define META_SIZE (sizeof(block_meta));
+
 
 static char* find_fit(int size);
 static void place(char* bp, int asize);
+
+static char* find_fit(int size) {
+    return NULL;
+}
+
+static void place(char* bp, int asize) {
+    return;
+}
+
 /* 
  * mm_init - initialize the malloc package.
  */
@@ -55,7 +76,15 @@ int mm_init(void)
     // 进行所有的初始化操作,包括分配初始的堆区域.
     // 必须在这里重新初始化所有全局变量
     // 成功返回0,失败返回-1
-    return 0;
+    mem_init();
+    int heap_size = mem_heapsize();
+    printf("\ninit heap size is: %d\n", heap_size);
+    // perror(strerror(errno));
+    if (errno == 0) {
+      return 0;
+    } else {
+      return -1;
+    }
 }
 
 /* 
@@ -64,38 +93,27 @@ int mm_init(void)
  */
 void *mm_malloc(size_t size)
 {
-//    int newsize = ALIGN(size + SIZE_T_SIZE);
-//    void *p = mem_sbrk(newsize);
-//    if (p == (void *)-1)
-//	return NULL;
-//    else {
-//        *(size_t *)p = size;
-//        return (void *)((char *)p + SIZE_T_SIZE);
-//    }
-    // size_t asize;
-    // size_t extendsize;
-    // char *bp;
+  char* ret = find_fit(size); // 在数据结构中找合适的内存空间
+  place(NULL, 10);
+  if (ret != NULL) {
+    return ret;
+  }
 
-    // if (size == 0)
-    //     return NULL;
+  // 没找到, 就在堆上分配新的
+  void *p = mem_sbrk(0); // current break position
+  int total_size = size + META_SIZE;
+  void *request = mem_sbrk(ALIGN(total_size)); // 保证8字节对齐
+  int len = mem_heapsize();
+  printf("now heap size is : %d\n", len);
+  if (request == (void*)-1) {
+    return NULL;
+  }
+  assert(p == request); // Not thread safe
 
-    // if (size <= DSIZE) 
-    //     asize = 2 * DSIZE;
-    // else 
-    //     asize = DSIZE * ((size + (DSIZE) + (DSIZE - 1)) / DSIZE);
-
-    // if ((bp = find_fit(asize)) != NULL) {
-    //     place(bp, asize);
-    //     return bp;
-    // }
-
-    // extendsize = MAX(asize,CHUNKSIZE);
-
-    // if ((bp = extend_heap(extendsize / WSIZE)) == NULL)
-    //     return NULL;
-
-    // place(bp, asize);
-    // return bp;
+  // 更新数据结构
+  // code
+  
+  return p;
 }
 
 /*
@@ -103,7 +121,7 @@ void *mm_malloc(size_t size)
  */
 void mm_free(void *ptr)
 {
-
+  return;
 }
 
 /*
@@ -111,19 +129,7 @@ void mm_free(void *ptr)
  */
 void *mm_realloc(void *ptr, size_t size)
 {
-    void *oldptr = ptr;
-    void *newptr;
-    size_t copySize;
-    
-    newptr = mm_malloc(size);
-    if (newptr == NULL)
-      return NULL;
-    copySize = *(size_t *)((char *)oldptr - SIZE_T_SIZE);
-    if (size < copySize)
-      copySize = size;
-    memcpy(newptr, oldptr, copySize);
-    mm_free(oldptr);
-    return newptr;
+  return NULL;
 }
 
 
