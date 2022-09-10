@@ -45,24 +45,29 @@ team_t team = {
 
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
 
+ typedef struct block_meta* blockptr;
+
 #pragma pack(push, 8)
 typedef struct block_meta {
   size_t size;
-  int free;
-  struct block_meta* next_block;
+  int free; // 可用空间
+  blockptr next_block;
 } block_meta;
 #pragma pack(8)
 
+blockptr base = NULL;
 
 #define META_SIZE (sizeof(block_meta));
 
 
-static char* find_fit(int size);
+static char* find_fit(blockptr* last, int size);
 static void place(char* bp, int asize);
 
-static char* find_fit(int size) {
-    return NULL;
+static char* find_fit(blockptr* last, int size) {
+  return NULL;
 }
+
+blockptr extend_heap(blockptr last, size_t s);
 
 static void place(char* bp, int asize) {
     return;
@@ -93,7 +98,7 @@ int mm_init(void)
  */
 void *mm_malloc(size_t size)
 {
-  char* ret = find_fit(size); // 在数据结构中找合适的内存空间
+  char* ret = find_fit(NULL, size); // 在数据结构中找合适的内存空间
   place(NULL, 10);
   if (ret != NULL) {
     return ret;
@@ -112,7 +117,6 @@ void *mm_malloc(size_t size)
 
   // 更新数据结构
   // code
-  
   return p;
 }
 
