@@ -45,7 +45,9 @@ team_t team = {
 
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
 
- typedef struct block_meta* blockptr;
+#define MAX(x, y) ((x) > (y) ? (x) : (y))
+
+typedef struct block_meta* blockptr;
 
 #pragma pack(push, 8)
 typedef struct block_meta {
