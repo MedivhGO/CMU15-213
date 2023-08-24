@@ -6,7 +6,7 @@
 
 - [ ] archlab
 
-- [ ] malloclab
+- [x] malloclab
 
 - [x] datalab
 
