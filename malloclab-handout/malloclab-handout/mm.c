@@ -98,45 +98,45 @@ static char* find_fit(blockptr* last, int size) {
 blockptr extend_heap(blockptr last, size_t s);
 
 static void place(char* bp, int asize) {
-    return;
+  return;
 }
 
 static void check_free_blocks_marked_free()
 {
-
+  printf("check_free_blocks_marked_free passed.\n");
 }
 
 static void check_contiguous_free_block_coalesced()
 {
-
+  printf("check_contiguous_free_block_coalesced passed.\n");
 }
 
 static void check_all_free_blocks_in_free_list()
 {
-
+  printf("check_all_free_blocks_in_free_list passed.\n");
 }
 
 static void check_all_free_blocks_in_valid_ftr_hdr()
 {
-
+  printf("check_all_free_blocks_in_valid_ftr_hdr passed.\n");
 }
 
 static void check_ptrs_valid_heap_address()
 {
-
+  printf("check_ptrs_valid_heap_address passed.\n");
 }
 
 // 用于检测堆是否有问题，如果没有问题就返回 0
-static int mm_check(void)
+int mm_check(void)
 {
-    printf("BEGIN CHECK\n");
-    check_free_blocks_marked_free();
-    check_contiguous_free_block_coalesced();
-    check_all_free_blocks_in_free_list();
-    check_all_free_blocks_in_valid_ftr_hdr();
-    check_ptrs_valid_heap_address();
-    printf("END CHECK\n");
-    return 0;
+  printf("BEGIN CHECK\n");
+  check_free_blocks_marked_free();
+  check_contiguous_free_block_coalesced();
+  check_all_free_blocks_in_free_list();
+  check_all_free_blocks_in_valid_ftr_hdr();
+  check_ptrs_valid_heap_address();
+  printf("END CHECK\n");
+  return 0;
 }
 
 /* 
@@ -144,14 +144,14 @@ static int mm_check(void)
  */
 int mm_init(void)
 {
-    // 进行所有的初始化操作, 包括分配初始的堆区域
-    // 必须在这里重新初始化所有全局变量
-    // 成功返回 0, 失败返回 -1
-    mem_init();
-    int heap_size = mem_heapsize();
-    printf("\ninit heap size is: %d\n", heap_size);
-    perror(strerror(errno));
-    return errno == 0 ? 0 : -1;
+  // 进行所有的初始化操作, 包括分配初始的堆区域
+  // 必须在这里重新初始化所有全局变量
+  // 成功返回 0, 失败返回 -1
+  mem_init();
+  int heap_size = mem_heapsize();
+  printf("\ninit heap size is: %d\n", heap_size);
+  perror(strerror(errno));
+  return errno == 0 ? 0 : -1;
 }
 
 /* 
@@ -176,9 +176,6 @@ void *mm_malloc(size_t size)
     return NULL;
   }
   assert(p == request); // Not thread safe
-
-
-  mm_check();
 
   // 更新数据结构
   // code
