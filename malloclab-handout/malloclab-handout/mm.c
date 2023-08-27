@@ -44,11 +44,16 @@ team_t team = {
 #define DSIZE 8
 #define CHUNKSIZE (1<<12) // 4KB
 
+#define GET(p) (*(unsigned int*)(p))
+#define PUG(p, val) ((*(unsigned int*)(p)) = (val))
+
+#define GET_SIZE(p) (GET(p) & ~0x7)
+#define GET_ALLOC(p) (GET(p) & 0x1)
+
 /* rounds up to the nearest multiple of ALIGNMENT */
 
 /* 8 字节对齐， + 7 是为了保证向上舍入 */
 #define ALIGN(size) (((size) + (ALIGNMENT-1)) & ~0x7)
-
 
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
 
@@ -73,33 +78,13 @@ team_t team = {
   size_t mem_pagesize(void);
 */
 
-typedef struct block_meta* blockptr;
+static char* heap_listp;
 
-#pragma pack(push, 8)
-typedef struct block_meta {
-  size_t size;
-  int free; // 可用空间
-  blockptr next_block;
-} block_meta;
-#pragma pack(8)
-
-blockptr base = NULL;
-
-#define META_SIZE (sizeof(block_meta));
-
-
-static char* find_fit(blockptr* last, int size);
+// 定义一些辅助函数
+static void* extend_heap(size_t words);
+static void* coalesce(void *bp);
 static void place(char* bp, int asize);
-
-static char* find_fit(blockptr* last, int size) {
-  return NULL;
-}
-
-blockptr extend_heap(blockptr last, size_t s);
-
-static void place(char* bp, int asize) {
-  return;
-}
+static void* find_fit(int size);
 
 static void check_free_blocks_marked_free()
 {
@@ -160,15 +145,9 @@ int mm_init(void)
  */
 void *mm_malloc(size_t size)
 {
-  char* ret = find_fit(NULL, size); // 在数据结构中找合适的内存空间
-  place(NULL, 10);
-  if (ret != NULL) {
-    return ret;
-  }
-
   // 没找到, 就在堆上分配新的
   void *p = mem_sbrk(0); // current break position
-  int total_size = size + META_SIZE;
+  int total_size = size;
   void *request = mem_sbrk(ALIGN(total_size)); // 保证 8 字节对齐
   int len = mem_heapsize();
   printf("now heap size is : %d\n", len);
@@ -197,17 +176,3 @@ void *mm_realloc(void *ptr, size_t size)
 {
   return NULL;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
