@@ -44,11 +44,20 @@ team_t team = {
 #define DSIZE 8
 #define CHUNKSIZE (1<<12) // 4KB
 
-#define GET(p) (*(unsigned int*)(p))
-#define PUG(p, val) ((*(unsigned int*)(p)) = (val))
+#define GET(p) (*(unsigned int*)(p)) // 获得 p 地址开头的 4 字节数据
+#define PUT(p, val) ((*(unsigned int*)(p)) = (val)) // 将 val 放到 p 地址开头的 4 字节空间
 
-#define GET_SIZE(p) (GET(p) & ~0x7)
-#define GET_ALLOC(p) (GET(p) & 0x1)
+#define GET_SIZE(p) (GET(p) & ~0x7) // 获得 4 字节的前 24 位
+#define GET_ALLOC(p) (GET(p) & 0x1) // 获得 4 字节的最后 1 位
+
+#define HDRP(bp)           ((char*)(bp) - WSIZE) // 向前移动 4 字节
+#define FTRP(bp)           ((char*)(bp) + GET_SIZE(HDRP(bp)) - DSIZE)
+
+#define NEXT_BLKP(bp)  ((char *)(bp) + GET_SIZE(((char *)(bp) - WSIZE))) //line:vm:mm:nextblkp
+#define PREV_BLKP(bp)  ((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE))) //line:vm:mm:prevblkp
+
+/* pack a size and allocated bit into a word */
+#define PACK(size, alloc) ((size) | (alloc))
 
 /* rounds up to the nearest multiple of ALIGNMENT */
 
@@ -78,13 +87,15 @@ team_t team = {
   size_t mem_pagesize(void);
 */
 
-static char* heap_listp;
+static char* heap_listp = 0;
+static char* rover;
+static char* pre_listp;
 
 // 定义一些辅助函数
 static void* extend_heap(size_t words);
 static void* coalesce(void *bp);
-static void place(char* bp, int asize);
-static void* find_fit(int size);
+static void place(char* bp, size_t asize);
+static void* find_fit(size_t size);
 
 static void check_free_blocks_marked_free()
 {
@@ -124,19 +135,59 @@ int mm_check(void)
   return 0;
 }
 
+static void* extend_heap(size_t words)
+{
+  char* bp;
+  size_t size;
+
+  /* Allocate an even number of words to maintain alignment */
+  size = (words % 2) ? (words + 1) * WSIZE : words * WSIZE;
+  if ((long)(bp = mem_sbrk(size)) == -1) {
+    return NULL;
+  }
+
+  PUT(HDRP(bp), PACK(size, 0));
+  PUT(FTRP(bp), PACK(size, 0));
+  PUT(HDRP(NEXT_BLKP(bp)), PACK(0, 1));
+
+  return coalesce(bp);
+}
+
+static void* find_fit(size_t aszie)
+{
+
+}
+
+static void place(char *bp, size_t asize)
+{
+
+}
+
+static void *coalesce(void* bp)
+{
+
+}
+
+
+
 /* 
  * mm_init - initialize the malloc package.
  */
 int mm_init(void)
 {
-  // 进行所有的初始化操作, 包括分配初始的堆区域
-  // 必须在这里重新初始化所有全局变量
-  // 成功返回 0, 失败返回 -1
-  mem_init();
-  int heap_size = mem_heapsize();
-  printf("\ninit heap size is: %d\n", heap_size);
-  perror(strerror(errno));
-  return errno == 0 ? 0 : -1;
+  if (heap_listp = mem_sbrk(4 * WSIZE) == (void*)-1) {
+    return -1;
+  }
+  PUT(heap_listp, 0);
+  PUT(heap_listp + (1 * WSIZE), PACK(DSIZE, 1)); // Prologue header
+  PUT(heap_listp + (2 * WSIZE), PACK(DSIZE, 1)); // Prologue footer
+  PUT(heap_listp + (3 * WSIZE), PACK(0, 1));     // Epilogue header
+  heap_listp += (2 * WSIZE);
+  pre_listp = heap_listp;
+  if (extend_heap(CHUNKSIZE/WSIZE) == NULL) {
+    return -1;
+  }
+  return 0;
 }
 
 /* 
@@ -155,9 +206,6 @@ void *mm_malloc(size_t size)
     return NULL;
   }
   assert(p == request); // Not thread safe
-
-  // 更新数据结构
-  // code
   return p;
 }
 
