@@ -88,7 +88,6 @@ team_t team = {
 */
 
 static char* heap_listp = 0;
-static char* rover;
 static char* pre_listp;
 
 // 定义一些辅助函数
@@ -156,6 +155,8 @@ static void* extend_heap(size_t words)
 static void* find_fit(size_t aszie)
 {
 
+  return NULL;
+
 }
 
 static void place(char *bp, size_t asize)
@@ -165,7 +166,29 @@ static void place(char *bp, size_t asize)
 
 static void *coalesce(void* bp)
 {
+  size_t prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp)));
+  size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp)));
+  size_t size = GET_SIZE(HDRP(bp));
 
+  if (prev_alloc && next_alloc) {  // case 1
+    return bp;
+  } else if (prev_alloc && !next_alloc) { // case 2
+    size += GET_SIZE(HDRP(NEXT_BLKP(bp)));
+    PUT(HDRP(bp), PACK(size, 0));
+    PUT(FTRP(bp), PACK(size, 0));
+  } else if (!prev_alloc && next_alloc) { // case 3
+    size += GET_SIZE(HDRP(PREV_BLKP(bp)));
+    PUT(FTRP(bp), PACK(size, 0));
+    PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0));
+    bp = PREV_BLKP(bp);
+  } else { // case 4
+    size += GET_SIZE(HDRP(PREV_BLKP(bp))) +
+          GET_SIZE(FTRP(NEXT_BLKP(bp)));
+    PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0));
+    PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0));
+    bp = PREV_BLKP(bp);
+  }
+  return bp;
 }
 
 
@@ -175,7 +198,7 @@ static void *coalesce(void* bp)
  */
 int mm_init(void)
 {
-  if (heap_listp = mem_sbrk(4 * WSIZE) == (void*)-1) {
+  if ((heap_listp = mem_sbrk(4 * WSIZE)) == (void*)-1) {
     return -1;
   }
   PUT(heap_listp, 0);
@@ -196,25 +219,43 @@ int mm_init(void)
  */
 void *mm_malloc(size_t size)
 {
-  // 没找到, 就在堆上分配新的
-  void *p = mem_sbrk(0); // current break position
-  int total_size = size;
-  void *request = mem_sbrk(ALIGN(total_size)); // 保证 8 字节对齐
-  int len = mem_heapsize();
-  printf("now heap size is : %d\n", len);
-  if (request == (void*)-1) {
+  size_t asize;
+  size_t extendsize;
+  char* bp;
+
+  if (size == 0) {
     return NULL;
   }
-  assert(p == request); // Not thread safe
-  return p;
+
+  if (size <= DSIZE) {
+    asize = 2 * DSIZE;
+  } else {
+    asize = DSIZE * (size + (DSIZE) + (DSIZE - 1) / DSIZE);
+  }
+
+  if ((bp = find_fit(asize)) != NULL) {
+    place(bp, asize);
+    return bp;
+  }
+
+  extendsize = MAX(asize, CHUNKSIZE);
+  if ((bp = extend_heap(extendsize / WSIZE)) == NULL) {
+    return NULL;
+  }
+  place(bp, asize);
+  return bp;
 }
 
 /*
  * mm_free - Freeing a block does nothing.
  */
-void mm_free(void *ptr)
+void mm_free(void *bp)
 {
-  return;
+  size_t size = GET_SIZE(HDRP(bp));
+
+  PUT(HDRP(bp), PACK(size, 0));
+  PUT(FTRP(bp), PACK(size, 0));
+  coalesce(bp);
 }
 
 /*
