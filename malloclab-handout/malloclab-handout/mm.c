@@ -42,17 +42,22 @@ team_t team = {
 
 #define WSIZE 4
 #define DSIZE 8
-#define CHUNKSIZE (1<<12) // 4KB
+#define CHUNKSIZE (1<<12) // 4*1024
 
 #define GET(p) (*(unsigned int*)(p)) // 获得 p 地址开头的 4 字节数据
 #define PUT(p, val) ((*(unsigned int*)(p)) = (val)) // 将 val 放到 p 地址开头的 4 字节空间
 
+// 从地址 p 处的头部或者脚部分别返回大小和已分配位
 #define GET_SIZE(p) (GET(p) & ~0x7) // 获得 4 字节的前 24 位
 #define GET_ALLOC(p) (GET(p) & 0x1) // 获得 4 字节的最后 1 位
 
+// 针对块指针 bp 的操作
+
+// 分别返回指向这个块的头部和脚部的指针
 #define HDRP(bp)           ((char*)(bp) - WSIZE) // 向前移动 4 字节
 #define FTRP(bp)           ((char*)(bp) + GET_SIZE(HDRP(bp)) - DSIZE)
 
+// 分别返回指向后面的块和前面的块的块指针
 #define NEXT_BLKP(bp)  ((char *)(bp) + GET_SIZE(((char *)(bp) - WSIZE))) //line:vm:mm:nextblkp
 #define PREV_BLKP(bp)  ((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE))) //line:vm:mm:prevblkp
 
@@ -88,7 +93,6 @@ team_t team = {
 */
 
 static char* heap_listp = 0;
-static char* pre_listp;
 
 // 定义一些辅助函数
 static void* extend_heap(size_t words);
@@ -152,15 +156,35 @@ static void* extend_heap(size_t words)
   return coalesce(bp);
 }
 
-static void* find_fit(size_t aszie)
+static void* find_fit(size_t asize)
 {
+  char* res = heap_listp;
+  res = NEXT_BLKP(res);
+  size_t cur_size = GET_SIZE(HDRP(res));
+  size_t cur_alloc = GET_ALLOC(HDRP(res));
 
-  return NULL;
-
+  while (cur_size < asize || cur_alloc) {
+    res = NEXT_BLKP(res);
+    cur_size = GET_SIZE(HDRP(res));
+    if (cur_size == 0) { // 当 cur_size 为 0 时，已经找到了最后，说明没有合适的空间了。
+      return NULL;
+    }
+    cur_alloc = GET_ALLOC(HDRP(res));
+  }
+  return res;
 }
 
 static void place(char *bp, size_t asize)
 {
+  size_t cur_size = GET_SIZE(HDRP(bp));
+  // 因为分配的块需要时 16 字节对齐
+  if ((cur_size - asize) >= (2 * DSIZE)) {
+    PUT(HDRP(bp), PACK(asize, 1));
+    PUT(FTRP(bp), PACK(asize, 1));
+  } else {
+    PUT(HDRP(bp), PACK(cur_size, 1));
+    PUT(FTRP(bp), PACK(cur_size, 1));
+  }
 
 }
 
@@ -170,28 +194,26 @@ static void *coalesce(void* bp)
   size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp)));
   size_t size = GET_SIZE(HDRP(bp));
 
-  if (prev_alloc && next_alloc) {  // case 1
+  if (prev_alloc && next_alloc) {         // case 1 前后已经分配，不需要合并
     return bp;
-  } else if (prev_alloc && !next_alloc) { // case 2
+  } else if (prev_alloc && !next_alloc) { // case 2 前面的已经分配，后面的没有分配
     size += GET_SIZE(HDRP(NEXT_BLKP(bp)));
     PUT(HDRP(bp), PACK(size, 0));
     PUT(FTRP(bp), PACK(size, 0));
-  } else if (!prev_alloc && next_alloc) { // case 3
+  } else if (!prev_alloc && next_alloc) { // case 3 前面的没有分配， 后面的已经分配
     size += GET_SIZE(HDRP(PREV_BLKP(bp)));
     PUT(FTRP(bp), PACK(size, 0));
     PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0));
     bp = PREV_BLKP(bp);
-  } else { // case 4
+  } else {                                // case 4 前后都没有分配
     size += GET_SIZE(HDRP(PREV_BLKP(bp))) +
           GET_SIZE(FTRP(NEXT_BLKP(bp)));
     PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0));
-    PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0));
+    PUT(FTRP(NEXT_BLKP(bp)), PACK(size, 0));
     bp = PREV_BLKP(bp);
   }
   return bp;
 }
-
-
 
 /* 
  * mm_init - initialize the malloc package.
@@ -206,8 +228,8 @@ int mm_init(void)
   PUT(heap_listp + (2 * WSIZE), PACK(DSIZE, 1)); // Prologue footer
   PUT(heap_listp + (3 * WSIZE), PACK(0, 1));     // Epilogue header
   heap_listp += (2 * WSIZE);
-  pre_listp = heap_listp;
-  if (extend_heap(CHUNKSIZE/WSIZE) == NULL) {
+
+  if (extend_heap(CHUNKSIZE/WSIZE) == NULL) { // 初始化了 1k 个字
     return -1;
   }
   return 0;
@@ -227,10 +249,10 @@ void *mm_malloc(size_t size)
     return NULL;
   }
 
-  if (size <= DSIZE) {
-    asize = 2 * DSIZE;
+  if (size <= DSIZE) { // 强制了最小的块大小是 16 字节， 8 字节用来满足对齐要求，另外 8 个用来
+    asize = 2 * DSIZE; // 放头部和脚部
   } else {
-    asize = DSIZE * (size + (DSIZE) + (DSIZE - 1) / DSIZE);
+    asize = DSIZE * ((size + (DSIZE) + (DSIZE - 1)) / DSIZE); // 超过 8 字节，就向上舍入到最接近 8 的整倍数
   }
 
   if ((bp = find_fit(asize)) != NULL) {
