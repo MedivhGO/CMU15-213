@@ -177,15 +177,17 @@ static void* find_fit(size_t asize)
 static void place(char *bp, size_t asize)
 {
   size_t cur_size = GET_SIZE(HDRP(bp));
-  // 因为分配的块需要时 16 字节对齐
+  // 由于最小的块大小是 16 字节，如果分割后剩下的块大于或等于最小块大小
+  // 那么我们就需要分割这个块
   if ((cur_size - asize) >= (2 * DSIZE)) {
     PUT(HDRP(bp), PACK(asize, 1));
     PUT(FTRP(bp), PACK(asize, 1));
+    PUT(HDRP(NEXT_BLKP(bp)), PACK(cur_size - asize, 0));
+    PUT(FTRP(NEXT_BLKP(bp)), PACK(cur_size - asize, 0));
   } else {
     PUT(HDRP(bp), PACK(cur_size, 1));
     PUT(FTRP(bp), PACK(cur_size, 1));
   }
-
 }
 
 static void *coalesce(void* bp)
@@ -285,5 +287,29 @@ void mm_free(void *bp)
  */
 void *mm_realloc(void *ptr, size_t size)
 {
-  return NULL;
+  if (ptr == NULL) {
+    return mm_malloc(size);
+  }
+  if (size == 0) {
+    mm_free(ptr);
+    return NULL;
+  }
+
+  void* newptr;
+  size_t copySize;
+
+  newptr = mm_malloc(size);
+  if (newptr == NULL) {
+    return NULL;
+  }
+  size = GET_SIZE(HDRP(ptr));
+  copySize = GET_SIZE(HDRP(newptr));
+  // 如果新分配的尺寸大于当前的 ptr 所 realloc 的尺寸，就按新分配的大小进行 copy
+  if (size < copySize) {
+    copySize = size;
+  }
+  // copySize - DSIZE 是因为需要减去头部和脚部的大小
+  memcpy(newptr, ptr, copySize - DSIZE);
+  mm_free(ptr);
+  return newptr;
 }
